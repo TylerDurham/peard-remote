@@ -1,0 +1,42 @@
+# List available recipes
+default:
+    @just --list
+
+# Install dependencies into the virtualenv
+sync:
+    uv sync
+
+# Run the peard CLI, e.g. `just run scan --timeout 10`
+[positional-arguments]
+run *args:
+    uv run peard "$@"
+
+# Run the tests, e.g. `just test -k config`
+[positional-arguments]
+test *args:
+    uv run pytest "$@"
+
+# Check for lint errors
+lint:
+    uvx ruff check .
+
+# Format the code
+fmt:
+    uvx ruff format .
+
+# Lint and test
+check: lint test
+
+# Build the sdist and wheel into dist/
+build:
+    uv build
+
+# Remove build artifacts and caches
+clean:
+    rm -rf dist .pytest_cache .ruff_cache
+    find src tests -type d -name __pycache__ -prune -exec rm -rf {} +
+
+
+reset:
+  rm -rf ~/.config/peard-remote/
+  rm -rf ~/.pyatv.conf

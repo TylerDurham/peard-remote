@@ -48,7 +48,7 @@ async def pair(
                 name=tv.name,
                 description=tv.device_info.model_str,
                 identifier=str(tv.identifier),
-                protocol=str(handler.service.protocol),
+                protocol=handler.service.protocol.name,
             )
         )
         config.save()

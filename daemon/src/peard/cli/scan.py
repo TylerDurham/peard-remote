@@ -1,3 +1,5 @@
+"""The `peard scan` command: find Apple TVs on the local network."""
+
 import asyncio
 from typing import List, Optional
 
@@ -21,12 +23,17 @@ def command(
 ):
     """Scans the network for compatible Apple TV devices."""
 
+    # `tvs` is assigned inside the spinner block, so declare its type up front.
     tvs: List[BaseConfig]
     tbl = new_tv_table()
 
     with spinner("Scanning for TVs. Please wait..."):
-        tvs = asyncio.run(scan(timeout))
+        # Typer commands are synchronous, so run the async scan in its own event loop.
+        # TODO: pass `hosts` and `identifier` through; they are currently ignored.
+        tvs = asyncio.run(scan(hosts=hosts, timeout=timeout, identifier=identifier))
 
+    # Number rows from 1. The "Protocols" and "Paired" columns are left blank, since
+    # this command doesn't look up saved pairings.
     count = 0
     for tv in tvs:
         count = count + 1

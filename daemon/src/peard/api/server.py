@@ -11,7 +11,8 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
 from pyatv import exceptions
-from pyatv.const import InputAction
+from pyatv.const import InputAction, PowerState
+from pyatv.interface import AppleTV
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -64,6 +65,12 @@ class Action(StrEnum):
     hold = "hold"
 
 
+class PowerCommand(StrEnum):
+    on = "on"
+    off = "off"
+    toggle = "toggle"
+
+
 INPUT_ACTIONS = {
     Action.tap: InputAction.SingleTap,
     Action.double: InputAction.DoubleTap,
@@ -104,6 +111,52 @@ def find_device(config: Config, key: str) -> Device:
     if len(matches) != 1:
         raise HTTPException(404, f"No single paired Apple TV matches {key!r}")
     return matches[0]
+
+
+async def connect_active(request: Request) -> tuple[str, AppleTV]:
+    """Get the identifier of the active TV, and a connection to it."""
+    identifier = Config.load().active
+    if identifier is None:
+        raise HTTPException(409, "No active Apple TV. Run `peard set-active` first.")
+
+    controller: Controller = request.app.state.controller
+    try:
+        return identifier, await controller.get(identifier)
+    except PermissionError as e:
+        raise HTTPException(409, str(e)) from e
+    except LookupError as e:
+        raise HTTPException(503, str(e)) from e
+    except (
+        exceptions.AuthenticationError,
+        exceptions.InvalidCredentialsError,
+        exceptions.NoCredentialsError,
+    ) as e:
+        raise HTTPException(
+            502, f"{identifier} rejected its saved credentials: {e}"
+        ) from e
+    except CONNECTION_ERRORS as e:
+        raise HTTPException(503, f"Could not connect to {identifier}: {e}") from e
+
+
+@asynccontextmanager
+async def command_errors(
+    request: Request, identifier: str, name: str
+) -> AsyncIterator[None]:
+    """Turn errors from sending a command to a TV into HTTP errors."""
+    try:
+        yield
+    except exceptions.NotSupportedError as e:
+        raise HTTPException(501, f"{identifier} does not support {name!r}") from e
+    except CONNECTION_ERRORS as e:
+        # Drop the dead connection so that the next request reconnects.
+        await request.app.state.controller.drop(identifier)
+        raise HTTPException(503, f"Lost connection to {identifier}: {e}") from e
+    except (
+        exceptions.CommandError,
+        exceptions.InvalidStateError,
+        exceptions.ProtocolError,
+    ) as e:
+        raise HTTPException(502, f"{identifier} could not run {name!r}: {e}") from e
 
 
 app = FastAPI(title="peard", lifespan=lifespan)
@@ -188,43 +241,30 @@ async def key(
     if action is not Action.tap and name not in ACTION_KEYS:
         raise HTTPException(400, f"Key {name!r} does not support {action.value!r}")
 
-    identifier = Config.load().active
-    if identifier is None:
-        raise HTTPException(409, "No active Apple TV. Run `peard set-active` first.")
-
-    controller: Controller = request.app.state.controller
-
-    try:
-        atv = await controller.get(identifier)
-    except PermissionError as e:
-        raise HTTPException(409, str(e)) from e
-    except LookupError as e:
-        raise HTTPException(503, str(e)) from e
-    except (
-        exceptions.AuthenticationError,
-        exceptions.InvalidCredentialsError,
-        exceptions.NoCredentialsError,
-    ) as e:
-        raise HTTPException(
-            502, f"{identifier} rejected its saved credentials: {e}"
-        ) from e
-    except CONNECTION_ERRORS as e:
-        raise HTTPException(503, f"Could not connect to {identifier}: {e}") from e
-
+    identifier, atv = await connect_active(request)
     args = [INPUT_ACTIONS[action]] if name in ACTION_KEYS else []
-    try:
+    async with command_errors(request, identifier, name):
         await getattr(atv.remote_control, name)(*args)
-    except exceptions.NotSupportedError as e:
-        raise HTTPException(501, f"{identifier} does not support {name!r}") from e
-    except CONNECTION_ERRORS as e:
-        # Drop the dead connection so that the next request reconnects.
-        await controller.drop(identifier)
-        raise HTTPException(503, f"Lost connection to {identifier}: {e}") from e
-    except (
-        exceptions.CommandError,
-        exceptions.InvalidStateError,
-        exceptions.ProtocolError,
-    ) as e:
-        raise HTTPException(502, f"{identifier} could not run {name!r}: {e}") from e
 
     return {"key": name, "action": action.value}
+
+
+@app.post("/power/{command}", dependencies=[Depends(require_pear_header)])
+async def power(request: Request, command: PowerCommand) -> dict[str, str]:
+    """Wake the active TV or put it to sleep."""
+    identifier, atv = await connect_active(request)
+    async with command_errors(request, identifier, f"power {command.value}"):
+        state = atv.power.power_state
+        if command is PowerCommand.toggle:
+            turn_on = state is not PowerState.On
+        else:
+            turn_on = command is PowerCommand.on
+
+        if turn_on:
+            await atv.power.turn_on()
+        elif state is not PowerState.Off:
+            # pyatv turns a TV off by holding Home and pressing Select, which would wake
+            # one that is already asleep.
+            await atv.power.turn_off()
+
+    return {"power": "on" if turn_on else "off"}

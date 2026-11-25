@@ -231,7 +231,7 @@ class Monitor(PushListener, PowerListener, AudioListener):
                 ),
             }
         )
-        self._update_audio()
+        self._update_features()
 
         # pyatv only keeps weak references to listeners, but the server keeps us alive.
         atv.push_updater.listener = self
@@ -278,7 +278,7 @@ class Monitor(PushListener, PowerListener, AudioListener):
             app=app.name if app else None,
             appId=app.identifier if app else None,
         )
-        self._update_audio()
+        self._update_features()
         self._update_artwork(atv)
 
     def playstatus_error(self, updater: Any, exception: Exception) -> None:
@@ -290,21 +290,21 @@ class Monitor(PushListener, PowerListener, AudioListener):
         self._set(power=self._power_name(new_state))
 
     def volume_update(self, old_level: float, new_level: float) -> None:
-        self._update_audio()
+        self._update_features()
 
     def volume_device_update(
         self, output_device: Any, old_level: float, new_level: float
     ) -> None:
-        self._update_audio()
+        self._update_features()
 
     def outputdevices_update(self, old_devices: Any, new_devices: Any) -> None:
-        self._update_audio()
+        self._update_features()
 
     @staticmethod
     def _power_name(state: PowerState) -> str:
         return state.name.lower()
 
-    def _update_audio(self) -> None:
+    def _update_features(self) -> None:
         atv = self._atv
         if atv is None:
             return
@@ -322,6 +322,8 @@ class Monitor(PushListener, PowerListener, AudioListener):
             volume=volume,
             features={
                 **self._state["features"],
+                "power": available(FeatureName.TurnOn)
+                and available(FeatureName.TurnOff),
                 "volume": available(FeatureName.VolumeUp),
             },
         )

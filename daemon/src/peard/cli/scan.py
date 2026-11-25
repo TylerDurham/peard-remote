@@ -7,6 +7,7 @@ from pyatv.interface import BaseConfig
 from rich.console import Console
 from typer import Option
 from peard.cli.ui import new_tv_table, spinner
+from peard.core.config import Config
 from peard.core.discovery import scan
 
 console = Console()
@@ -29,14 +30,23 @@ def command(
 
     with spinner("Scanning for TVs. Please wait..."):
         # Typer commands are synchronous, so run the async scan in its own event loop.
-        # TODO: pass `hosts` and `identifier` through; they are currently ignored.
         tvs = asyncio.run(scan(hosts=hosts, timeout=timeout, identifier=identifier))
 
-    # Number rows from 1. The "Protocols" and "Paired" columns are left blank, since
-    # this command doesn't look up saved pairings.
+    paired = {device.identifier for device in Config.load().devices}
+
+    # Number rows from 1.
     count = 0
     for tv in tvs:
         count = count + 1
-        tbl.add_row(f"{count}", tv.name, tv.identifier, f"{tv.address}")
+        protocols = sorted(service.protocol.name for service in tv.services)
+        tbl.add_row(
+            f"{count}",
+            tv.name,
+            tv.identifier,
+            f"{tv.address}",
+            ", ".join(protocols),
+            # A TV has several identifiers, and any of them may be the saved one.
+            str(not paired.isdisjoint(tv.all_identifiers)),
+        )
 
     console.print(tbl)

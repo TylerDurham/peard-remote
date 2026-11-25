@@ -147,7 +147,7 @@ A `config.toml` from an older version is converted automatically and kept as
 
 ### Allowing mDNS through a firewall
 
-TVs reply straight to your computer, so rules that only allow the mDNS multicast address
+Scanning for Apple TVs reply straight to your computer, so rules that only allow the mDNS multicast address
 (`224.0.0.251`), such as firewalld's `mdns` service, aren't enough. Use the commands for the
 firewall you have:
 

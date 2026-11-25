@@ -147,9 +147,19 @@ A `config.toml` from an older version is converted automatically and kept as
 
 ### Allowing mDNS through a firewall
 
-Scanning for Apple TVs reply straight to your computer, so rules that only allow the mDNS multicast address
-(`224.0.0.251`), such as firewalld's `mdns` service, aren't enough. Use the commands for the
-firewall you have:
+These commands scan for Apple TVs, so they need mDNS to work:
+
+```sh
+peard scan
+peard pair
+peard list    # without mDNS, shows every TV as offline
+```
+
+The daemon and `peard key` scan for the TV too, to connect to it.
+
+When you scan, Apple TVs reply straight to your computer, so rules that only allow the mDNS
+multicast address (`224.0.0.251`), such as firewalld's `mdns` service, aren't enough. Use
+the commands for the firewall you have:
 
 **ufw** (Ubuntu, Mint, CachyOS)
 

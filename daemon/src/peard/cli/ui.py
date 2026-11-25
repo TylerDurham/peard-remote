@@ -20,6 +20,22 @@ def new_tv_table() -> Table:
     tbl.add_column("Paired")
     return tbl
 
+def select_from_table(tbl: Table) -> int:
+    count = len(tbl.rows)
+
+    console.print(tbl)
+
+    while True:
+        choice = typer.prompt(
+            f"Enter the number of a TV to select (1-{count}, q to quit)"
+        ).strip()
+        if choice.lower() in ("q", "quit"):
+            raise typer.Exit(code=1)
+        if choice.isdecimal() and 1 <= int(choice) <= count:
+            break
+        print(f"Invalid choice {choice!r}: enter a number from 1 to {count}.")
+    return int(choice)
+
 @contextmanager
 def spinner(description: str, *, console: Console = console, transient: bool = True, cb: Callable | None = None):
     with Progress(

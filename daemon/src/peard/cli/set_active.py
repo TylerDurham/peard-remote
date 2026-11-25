@@ -4,7 +4,7 @@ from typing import Optional
 from rich.console import Console
 import typer
 
-from peard.cli.ui import new_tv_table, spinner
+from peard.cli.ui import new_tv_table, select_from_table, spinner
 from peard.core import discovery
 from peard.core.config import Config
 
@@ -41,18 +41,7 @@ def command(identifier: Optional[str] = None):
                 str(device.identifier == config.active),
             )
 
-        console.print(tbl)
-
-        count = len(config.devices)
-        while True:
-            choice = typer.prompt(
-                f"Enter the number of the TV to make active (1-{count}, q to quit)"
-            ).strip()
-            if choice.lower() in ("q", "quit"):
-                raise typer.Exit(code=1)
-            if choice.isdecimal() and 1 <= int(choice) <= count:
-                break
-            print(f"Invalid choice {choice!r}: enter a number from 1 to {count}.")
+        choice = select_from_table(tbl)
 
         # Index the saved devices shown in the table, not the scan results.
         device = config.devices[int(choice) - 1]

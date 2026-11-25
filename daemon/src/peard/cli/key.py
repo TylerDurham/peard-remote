@@ -1,37 +1,43 @@
-
 import asyncio
 from typing import Optional
 
-import pyatv
-from pyatv.const import Protocol
+from pyatv import exceptions
 import typer
 
 from peard.cli.ui import spinner
-from peard.core import discovery
 from peard.core.config import Config
+from peard.core.controller import Controller
 
 
-def cmd_key(identifier: Optional[str] = None):
-    config = Config.load()
+async def _connect(identifier: str, command: str) -> None:
+    # A connection only works in the event loop that made it, so it has to be
+    # used and closed in here.
+    controller = Controller()
+    try:
+        atv = await controller.get(identifier)
+        await getattr(atv.remote_control, command)()
 
-    if identifier == None:
-        identifier = config.active
+    finally:
+        await controller.close()
 
-    creds = config.get_by_id(str(identifier))
 
-    with spinner("Scanning for TVs. Please wait..."):
-        tvs = asyncio.run(discovery.scan(5))
+def cmd_key(command: str, identifier: Optional[str] = None):
+    """Connects to a paired Apple TV (the active one by default)."""
+    if identifier is None:
+        identifier = Config.load().active
 
-    if len(tvs) == 0:
-        print("No Apple TVs found!")
+    if identifier is None:
+        print("No active Apple TV. Run `peard set-active` first.")
         raise typer.Exit(code=1)
 
-    tv = tvs[0]
+    try:
+        with spinner("Connecting. Please wait..."):
+            asyncio.run(_connect(identifier, command))
+    except (LookupError, PermissionError) as e:
+        print(e)
+        raise typer.Exit(code=1)
+    except (exceptions.AuthenticationError, exceptions.ConnectionFailedError) as e:
+        print(f"Could not connect to {identifier}: {e}")
+        raise typer.Exit(code=1)
 
-    protocol = Protocol["AirPlay"]
-    tv.set_credentials(protocol=protocol, credentials=creds.credentials)
-
-    conn = asyncio.run(pyatv.connect(loop=asyncio.get_running_loop(), config=tv))
-    
-
-    
+    print(f"Connected to {identifier}.")

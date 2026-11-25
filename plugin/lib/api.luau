@@ -7,13 +7,29 @@ M.PLUGIN = "dtd/peard-remote"
 M.REMOTE_PANEL = M.PLUGIN .. ":pad"
 M.KEYBOARD_PANEL = M.PLUGIN .. ":keyboard"
 
-local DEFAULT_ENDPOINT = "http://127.0.0.1:7655"
+local DEFAULT_PORT = 7655 -- keep in sync with daemon/src/peard/core/config.py
 local lastErrorAt = -1e12
+
+-- The port in peard's own config, so it only has to be changed there. Read each
+-- time, so that a new port is used as soon as the daemon has restarted.
+local function configPort(): number
+  local base = noctalia.getenv("XDG_CONFIG_HOME")
+  if base == nil or base == "" then
+    base = (noctalia.getenv("HOME") or "") .. "/.config"
+  end
+  local raw = noctalia.readFile(base .. "/peard-remote/config.json")
+  local v = type(raw) == "string" and noctalia.json.decode(raw) or nil
+  local port = type(v) == "table" and v.port or nil
+  if type(port) == "number" and port % 1 == 0 and port >= 1 and port <= 65535 then
+    return port
+  end
+  return DEFAULT_PORT
+end
 
 function M.url(path: string): string
   local ep = noctalia.getConfig("endpoint")
   if type(ep) ~= "string" or ep == "" then
-    ep = DEFAULT_ENDPOINT
+    ep = string.format("http://127.0.0.1:%d", configPort())
   end
   return (string.gsub(ep, "/+$", "")) .. path
 end

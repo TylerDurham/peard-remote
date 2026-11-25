@@ -33,7 +33,7 @@ def command(command: str, identifier: Optional[str] = None):
         identifier = Config.load().active
 
     if identifier is None:
-        print("No active Apple TV. Run `peard set-active` first.")
+        print("No active Apple TV. Run `peard set active` first.")
         raise typer.Exit(code=1)
 
     try:

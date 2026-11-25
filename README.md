@@ -56,7 +56,7 @@ peard pair
 ```
 
 The TV you paired last is the one you control. To switch between TVs, use the picker in
-the remote or run `peard set-active`.
+the remote or run `peard set active`.
 
 Finally, add the widget to a bar in `~/.config/noctalia/config.toml`:
 
@@ -96,7 +96,8 @@ noctalia msg plugin dtd/peard-remote:bridge all device "Office"
 | `peard scan`       | Find Apple TVs on the network                |
 | `peard pair`       | Pair with an Apple TV and make it active     |
 | `peard list`       | List paired Apple TVs                        |
-| `peard set-active` | Choose the Apple TV to control               |
+| `peard set active` | Choose the Apple TV to control               |
+| `peard set port`   | Change the port the server listens on        |
 | `peard key <name>` | Send a command, such as `up` or `play_pause` |
 | `peard serve`      | Start the API server                         |
 
@@ -121,10 +122,16 @@ curl -X POST -H 'X-Pear: 1' localhost:7655/key/play_pause
 
 ## Configuration
 
-Paired TVs, the active TV and the port are saved in `~/.config/peard-remote/config.toml`.
+Paired TVs, the active TV and the port are saved in `~/.config/peard-remote/config.json`.
 The file holds your pairing credentials, so only your user can read it.
 
-If you change the port, change the plugin's `endpoint` setting in Noctalia to match.
+The daemon and the plugin share this file. To change the port, run
+`peard set port <port>` and `systemctl --user restart peard.service`, and the plugin
+follows. `peard serve --port` doesn't change the file, so the plugin won't follow it. To
+point the plugin somewhere else, set its Bridge URL in Noctalia.
+
+A `config.toml` from an older version is converted automatically and kept as
+`config.toml.bak`. It holds your credentials too, and you can delete it.
 
 ## Troubleshooting
 
@@ -132,7 +139,7 @@ If you change the port, change the plugin's `endpoint` setting in Noctalia to ma
   firewall allows mDNS (`5353/udp`). A longer scan can help (`peard scan --timeout 10`), as
   can asking a TV directly (`peard scan --hosts <tv-ip>`)
 - **No TV selected** or **No active Apple TV:** choose a paired TV with the picker in the
-  remote, or run `peard set-active`
+  remote, or run `peard set active`
 - **Not connected:** the daemon is running but can't reach the selected TV. The remote
   shows why; `journalctl --user -u peard.service` has more
 - **Bridge not running:** check `systemctl --user status peard.service`

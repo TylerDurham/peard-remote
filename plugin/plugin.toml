@@ -21,7 +21,7 @@ key = "endpoint"
 type = "string"
 label_key = "settings.endpoint.label"
 description_key = "settings.endpoint.description"
-default = "http://127.0.0.1:7655"
+default = "" # use the port in peard's config
 
 # Holds the SSE stream to the bridge and publishes snapshots to shared state;
 # also the IPC target for keybinds.

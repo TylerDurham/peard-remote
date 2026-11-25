@@ -62,7 +62,7 @@ Installed. Next:
        [widget.appletv]
        type = "dtd/peard-remote:remote"
 
-To switch between TVs, use the picker in the remote or run: peard set-active
+To switch between TVs, use the picker in the remote or run: peard set active
 MSG
 }
 

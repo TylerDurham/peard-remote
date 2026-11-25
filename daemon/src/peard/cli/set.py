@@ -1,9 +1,10 @@
-"""The `peard set-active` command: choose which paired Apple TV to control."""
+"""The `peard set` commands: change the settings saved in the config."""
 
 import asyncio
 from typing import Optional
 
 from rich.console import Console
+from typer import Argument, Typer
 import typer
 
 from peard.cli.ui import new_tv_table, select_from_table, spinner
@@ -12,8 +13,16 @@ from peard.core.config import Config
 
 console = Console()
 
+# Each setting is a command of its own, such as `peard set port`.
+app = Typer(no_args_is_help=True)
 
-def command(identifier: Optional[str] = None):
+
+@app.command()
+def active(
+    identifier: Optional[str] = Argument(
+        None, help="The identifier of a paired TV. Choose from a list if omitted."
+    ),
+):
     """Sets the active Apple TV."""
     config = Config.load()
 
@@ -63,3 +72,17 @@ def command(identifier: Optional[str] = None):
     config.active = device.identifier
     config.save()
     print(f"Active TV is now {device.name} ({device.identifier}).")
+
+
+@app.command()
+def port(
+    port: int = Argument(min=1, max=65535, help="The port for the server to use."),
+):
+    """Sets the port that the server listens on."""
+    config = Config.load()
+    config.port = port
+    config.save()
+
+    # Unlike the active TV, a running server only reads the port when it starts.
+    print(f"Port is now {port}. To use it, restart the server:")
+    print("  systemctl --user restart peard.service")

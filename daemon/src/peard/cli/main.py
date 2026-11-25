@@ -1,13 +1,13 @@
 from typer import Typer
 
-from peard.cli import scan, key, list, set_active, pair, serve
+from peard.cli import scan, key, list, set, pair, serve
 
 app = Typer()
 
 app.command(name="scan")(scan.command)
 app.command(name="list")(list.command)
 app.command(name="key")(key.command)
-app.command(name="set-active")(set_active.command)
+app.add_typer(set.app, name="set", help="Changes a setting.")
 app.command(name="pair")(pair.command)
 app.command(name="serve")(serve.command)
 

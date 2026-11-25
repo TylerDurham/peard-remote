@@ -117,7 +117,7 @@ async def connect_active(request: Request) -> tuple[str, AppleTV]:
     """Get the identifier of the active TV, and a connection to it."""
     identifier = Config.load().active
     if identifier is None:
-        raise HTTPException(409, "No active Apple TV. Run `peard set-active` first.")
+        raise HTTPException(409, "No active Apple TV. Run `peard set active` first.")
 
     controller: Controller = request.app.state.controller
     try:

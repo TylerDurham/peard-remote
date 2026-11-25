@@ -2,7 +2,7 @@
   "settings": {
     "endpoint": {
       "label": "Bridge URL",
-      "description": "Where peard is listening (loopback only)"
+      "description": "Leave empty to use the port in peard's config"
     },
     "show_title": {
       "label": "Show title"

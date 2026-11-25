@@ -38,6 +38,7 @@ local function tooltip(s)
   if type(s.volume) == "number" then
     table.insert(rows, { key = "Volume", value = tostring(s.volume) .. "%" })
   end
+  table.insert(rows, { key = "Daemon", value = api.url("") })
   return rows
 end
 

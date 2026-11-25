@@ -51,6 +51,8 @@ async def pair(
                 protocol=handler.service.protocol.name,
             )
         )
+
+        config.active = tv.identifier
         config.save()
 
     finally:

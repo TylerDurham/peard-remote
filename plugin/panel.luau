@@ -99,6 +99,8 @@ local function header(s)
   local title
   if not s.daemon then
     title = "Bridge not running"
+  elseif not s.deviceId then
+    title = "No TV selected"
   elseif not s.connected then
     title = "Not connected"
   else

@@ -14,7 +14,7 @@ from peard.core.discovery import scan
 console = Console()
 
 
-def pair(timeout: int = Option(5, "--timeout", "-t")):
+def command(timeout: int = Option(5, "--timeout", "-t")):
 
     tvs: List[BaseConfig]
 

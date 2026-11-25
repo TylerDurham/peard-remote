@@ -11,7 +11,7 @@ from peard.core.config import Config
 console = Console()
 
 
-def cmd_set_active(identifier: Optional[str] = None):
+def command(identifier: Optional[str] = None):
     """Sets the active Apple TV."""
     config = Config.load()
 

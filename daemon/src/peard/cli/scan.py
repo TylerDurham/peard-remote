@@ -10,7 +10,7 @@ from peard.core.discovery import scan
 console = Console()
 
 
-def cmd_scan(
+def command(
     hosts: Optional[List[str]] = Option(
         None, "--hosts", "-H", help="One or more host ip addresses"
     ),

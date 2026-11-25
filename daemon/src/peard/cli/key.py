@@ -21,7 +21,7 @@ async def _connect(identifier: str, command: str) -> None:
         await controller.close()
 
 
-def cmd_key(command: str, identifier: Optional[str] = None):
+def command(command: str, identifier: Optional[str] = None):
     """Connects to a paired Apple TV (the active one by default)."""
     if identifier is None:
         identifier = Config.load().active

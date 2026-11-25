@@ -11,7 +11,7 @@ from peard.core.config import Config
 console = Console()
 
 
-def cmd_list(
+def command(
     json: bool = Option(False, "--json", "-j", help="Format the output as JSON."),
     timeout: int = Option(5, "--timeout", "-t"),
 ):

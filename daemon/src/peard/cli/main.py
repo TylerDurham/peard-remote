@@ -1,18 +1,14 @@
 from typer import Typer
 
-from peard.cli.key import cmd_key
-from peard.cli.list import cmd_list
-from peard.cli.pair import pair
-from peard.cli.scan import cmd_scan
-from peard.cli.set_active import cmd_set_active
+from peard.cli import scan, key, list, set_active, pair
 
 app = Typer()
 
-app.command(name="scan")(cmd_scan)
-app.command(name="list")(cmd_list)
-app.command(name="key")(cmd_key)
-app.command(name="set-active")(cmd_set_active)
-app.command()(pair)
+app.command(name="scan")(scan.command)
+app.command(name="list")(list.command)
+app.command(name="key")(key.command)
+app.command(name="set-active")(set_active.command)
+app.command(name="pair")(pair.command)
 
 if __name__ == "__main__":
     app()

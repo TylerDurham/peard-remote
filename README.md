@@ -136,13 +136,55 @@ A `config.toml` from an older version is converted automatically and kept as
 ## Troubleshooting
 
 - **No TVs found:** make sure the TV is awake and on the same network, and that your
-  firewall allows mDNS (`5353/udp`). A longer scan can help (`peard scan --timeout 10`), as
-  can asking a TV directly (`peard scan --hosts <tv-ip>`)
+  firewall [allows mDNS](#allowing-mdns-through-a-firewall) (`5353/udp`). A longer scan can
+  help (`peard scan --timeout 10`), as can asking a TV directly
+  (`peard scan --hosts <tv-ip>`)
 - **No TV selected** or **No active Apple TV:** choose a paired TV with the picker in the
   remote, or run `peard set active`
 - **Not connected:** the daemon is running but can't reach the selected TV. The remote
   shows why; `journalctl --user -u peard.service` has more
 - **Bridge not running:** check `systemctl --user status peard.service`
+
+### Allowing mDNS through a firewall
+
+TVs reply straight to your computer, so rules that only allow the mDNS multicast address
+(`224.0.0.251`), such as firewalld's `mdns` service, aren't enough. Use the commands for the
+firewall you have:
+
+**ufw** (Ubuntu, Mint, CachyOS)
+
+```sh
+sudo ufw allow 5353/udp comment 'mDNS'
+```
+
+Or, more securely, only allow your own network (change `192.168.1.0/24` to match yours):
+
+```sh
+sudo ufw allow from 192.168.1.0/24 to any port 5353 proto udp comment 'mDNS'
+```
+
+**firewalld** (Fedora, RHEL, openSUSE)
+
+```sh
+sudo firewall-cmd --permanent --add-port=5353/udp
+sudo firewall-cmd --reload
+```
+
+**nftables**, if your table and chain are `inet filter` and `input` (see
+`sudo nft list ruleset`)
+
+```sh
+sudo nft insert rule inet filter input udp dport 5353 accept
+```
+
+**iptables**
+
+```sh
+sudo iptables -I INPUT -p udp --dport 5353 -j ACCEPT
+```
+
+The `nft` and `iptables` rules are lost on reboot unless you save them, for example in
+`/etc/nftables.conf` or with your distribution's iptables service.
 
 ## Development
 

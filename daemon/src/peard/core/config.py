@@ -66,6 +66,13 @@ class Config:
             devices=devices, active=active, port=int(data.get("port", DEFAULT_PORT))
         )
 
+    def get_by_id(self, identifier: str):
+        for device in self.devices:
+            if device.identifier == identifier:
+                return device
+
+        raise KeyError(f"Could not find a device with id '{identifier}'")
+
     def save(self):
 
         path = config_path()

@@ -93,8 +93,14 @@ class Config:
             if d.protocol:
                 lines.append(f"protocol = {_q(d.protocol)}")
 
+        # Write a new file and swap it in, so that the server and the CLI never read a
+        # half-written config from each other. Resolve first to keep symlinks working.
+        target = path.resolve()
+        tmp = target.with_name(f"{target.name}.{os.getpid()}.tmp")
+
         # The file holds pairing credentials, so keep it private to the user.
-        path.touch(mode=0o600)
-        path.chmod(0o600)
-        path.write_text("\n".join(lines) + "\n")
+        tmp.touch(mode=0o600)
+        tmp.chmod(0o600)
+        tmp.write_text("\n".join(lines) + "\n")
+        tmp.replace(target)
         return path

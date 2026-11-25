@@ -5,7 +5,7 @@ import os
 import tomllib
 
 DEFAULT_DIR_NAME = "peard-remote"
-DEFAULT_PORT = 8000
+DEFAULT_PORT = 7655
 
 
 def config_dir() -> Path:

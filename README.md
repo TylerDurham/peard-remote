@@ -4,10 +4,9 @@
   <img src="media/peard-250x250.png" width="250" alt="peard logo"/>
 </div>
 
-*An Apple TV remote you pair with — so, a pear'd remote.*
-
-An Apple TV remote for the [Noctalia](https://noctalia.dev) v5 bar, built on
-[pyatv](https://pyatv.dev).
+A remote control that pairs with Apple TV. A `peard` remote that works on Linux for the 
+[Noctalia](https://noctalia.dev) v5 bar, built on [pyatv](https://pyatv.dev). More shells coming 
+soon.
 
 <div align="center">
   <img src="media/screenshot.png" width="800" alt="The remote panel open below the Noctalia bar"/>

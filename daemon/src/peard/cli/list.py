@@ -1,3 +1,5 @@
+"""The `peard list` command: show the paired Apple TVs saved in the config."""
+
 import asyncio
 from dataclasses import asdict
 
@@ -18,6 +20,7 @@ def command(
     """Lists all paired Apple TVs."""
     cfg = Config.load()
 
+    # JSON output is just the saved config, so it doesn't need a scan.
     if json:
         data = asdict(cfg)
         for device in data["devices"]:
@@ -31,8 +34,12 @@ def command(
         return
 
     with spinner("Looking for paired TVs. Please wait..."):
+        # Typer commands are synchronous, so run the async scan in its own event loop.
+        # One scan covers every TV, which is faster than scanning for each in turn.
         tvs = asyncio.run(discovery.scan(timeout=timeout))
 
+    # Addresses aren't saved in the config, so take them from the scan. A TV has several
+    # identifiers, and any of them may be the saved one.
     addresses = {
         identifier: str(tv.address) for tv in tvs for identifier in tv.all_identifiers
     }
@@ -40,14 +47,16 @@ def command(
     tbl = new_tv_table()
     tbl.add_column("Active")
 
+    # List every saved TV, including those the scan didn't find.
     for number, device in enumerate(cfg.devices, start=1):
         tbl.add_row(
             str(number),
             device.name,
             device.identifier,
+            # "offline" only means no reply to this scan; the TV may still be on.
             addresses.get(device.identifier, "offline"),
             device.protocol,
-            str(True),
+            str(True),  # Only paired TVs are saved in the config.
             str(device.identifier == cfg.active),
         )
 

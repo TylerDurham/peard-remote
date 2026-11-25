@@ -9,7 +9,7 @@ from peard.core.config import Config
 from peard.core.controller import Controller
 
 
-async def _connect(identifier: str, command: str) -> None:
+async def _command(identifier: str, command: str) -> None:
     # A connection only works in the event loop that made it, so it has to be
     # used and closed in here.
     controller = Controller()
@@ -32,7 +32,7 @@ def command(command: str, identifier: Optional[str] = None):
 
     try:
         with spinner("Connecting. Please wait..."):
-            asyncio.run(_connect(identifier, command))
+            asyncio.run(_command(identifier, command))
     except (LookupError, PermissionError) as e:
         print(e)
         raise typer.Exit(code=1)

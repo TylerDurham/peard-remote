@@ -4,13 +4,12 @@
 set -euo pipefail
 
 action=INSTALL
-dev_mode=0
 
-while [[ "$#" -gt 0 ]]; do 
-  case "$1" in 
-    -d|--dev-mode) dev_mode=1; shift ;;
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    -d|--dev-mode) echo "$1 is not implemented yet" >&2; exit 2 ;;
     -u|--uninstall) action=UNINSTALL; shift ;;
-    *) shift ;;
+    *) echo "Unknown option: $1" >&2; echo "Usage: $0 [-u|--uninstall]" >&2; exit 2 ;;
   esac
 done
 
@@ -21,7 +20,6 @@ units="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 install() {
   echo "installing"
   uv tool install --force --editable "$here/daemon"
-
 
   mkdir -p "$plugins" "$units"
   ln -sfn "$here/plugin" "$plugins/peard-remote"
@@ -34,47 +32,8 @@ install() {
   if pgrep -x noctalia >/dev/null; then
     noctalia msg plugins enable dtd/peard-remote || true
   fi
-}
 
-uninstall() {
-  echo "uninstalling"
-
-  systemctl --user stop peard.service
-  systemctl --user disable peard.service
-  rm -rf "$units/peard.service"
-  systemctl --user daemon-reload
-
-  rm -rf "$plugins/peard-remote"
-  if pgrep -x noctalia >/dev/null; then
-    noctalia msg plugins disable dtd/peard-remote || true
-  fi
-
-  uv tool uninstall "daemon"
-
-}
-
-case "$action" in 
-  INSTALL) install ;;
-  UNINSTALL) uninstall
-esac
-
-exit 0
-
-uv tool install --force --editable "$here/daemon"
-
-mkdir -p "$plugins" "$units"
-ln -sfn "$here/plugin" "$plugins/peard-remote"
-ln -sfn "$here/daemon/peard.service" "$units/peard.service"
-
-systemctl --user daemon-reload
-systemctl --user enable peard.service
-systemctl --user restart peard.service
-
-if pgrep -x noctalia >/dev/null; then
-  noctalia msg plugins enable dtd/peard-remote || true
-fi
-
-cat <<'MSG'
+  cat <<'MSG'
 
 Installed. Next:
   1. peard pair         # pick a TV and enter the PIN it shows; repeat per TV
@@ -84,3 +43,28 @@ Installed. Next:
        [widget.appletv]
        type = "dtd/peard-remote:remote"
 MSG
+}
+
+uninstall() {
+  echo "uninstalling"
+
+  # The service may already be gone, so keep cleaning up if these fail.
+  systemctl --user stop peard.service || true
+  systemctl --user disable peard.service || true
+  rm -rf "$units/peard.service"
+  systemctl --user daemon-reload
+
+  rm -rf "$plugins/peard-remote"
+  if pgrep -x noctalia >/dev/null; then
+    noctalia msg plugins disable dtd/peard-remote || true
+  fi
+
+  if uv tool list | grep '^peard ' >/dev/null; then
+    uv tool uninstall peard
+  fi
+}
+
+case "$action" in
+  INSTALL) install ;;
+  UNINSTALL) uninstall ;;
+esac

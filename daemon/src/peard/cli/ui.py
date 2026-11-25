@@ -1,4 +1,3 @@
-
 from contextlib import contextmanager
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
@@ -10,6 +9,7 @@ from typing import Callable, List
 
 console = Console()
 
+
 def new_tv_table() -> Table:
     tbl = Table()
     tbl.add_column("#")
@@ -19,6 +19,7 @@ def new_tv_table() -> Table:
     tbl.add_column("Protocols")
     tbl.add_column("Paired")
     return tbl
+
 
 def select_from_table(tbl: Table) -> int:
     count = len(tbl.rows)
@@ -36,8 +37,15 @@ def select_from_table(tbl: Table) -> int:
         print(f"Invalid choice {choice!r}: enter a number from 1 to {count}.")
     return int(choice)
 
+
 @contextmanager
-def spinner(description: str, *, console: Console = console, transient: bool = True, cb: Callable | None = None):
+def spinner(
+    description: str,
+    *,
+    console: Console = console,
+    transient: bool = True,
+    cb: Callable | None = None,
+):
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),

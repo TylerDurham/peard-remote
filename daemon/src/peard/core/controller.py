@@ -24,7 +24,6 @@ class _ConnectionListener(DeviceListener):
 
 
 class Controller:
-
     def __init__(self) -> None:
         self._connections: dict[str, AppleTV] = {}
         # pyatv only keeps weak references to listeners, so hold on to them here.

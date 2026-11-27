@@ -3,7 +3,6 @@ from collections.abc import Awaitable, Callable
 
 import pyatv
 from pyatv.const import Protocol
-from pyatv.interface import AppleTV
 
 from peard.core import discovery
 from peard.core.config import Config, Device
@@ -16,7 +15,22 @@ async def pair(
     show_pin: Callable[[int], None],
     default_pin: int = 1234,
 ):
+    """Pair with a TV and save it to the config as the active TV.
 
+    Either the TV shows a PIN for the user to enter, or the user enters `default_pin`
+    on the TV, depending on the protocol.
+
+    Args:
+        identifier: The unique identifier of the TV.
+        protocol: The protocol to pair with.
+        ask_pin: Called to ask the user for the PIN the TV shows.
+        show_pin: Called with the PIN the user must enter on the TV.
+        default_pin: The PIN to use when the TV doesn't provide one.
+
+    Raises:
+        LookupError: If the TV couldn't be found on the network.
+        RuntimeError: If pairing failed, for example because the PIN was wrong.
+    """
     loop = asyncio.get_running_loop()
 
     tvs = await discovery.scan(identifier=identifier)
@@ -42,6 +56,10 @@ async def pair(
         if not handler.has_paired:
             raise RuntimeError("Pairing failed")
 
+        # Replace any earlier pairing with this TV, whose credentials are now stale.
+        config.devices = [
+            d for d in config.devices if d.identifier != str(tv.identifier)
+        ]
         config.devices.append(
             Device(
                 credentials=str(handler.service.credentials),

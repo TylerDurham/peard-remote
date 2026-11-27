@@ -244,7 +244,7 @@ class Monitor(PushListener, PowerListener, AudioListener):
 
             try:
                 atv = await self._controller.get(identifier)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - keep retrying whatever goes wrong
                 log.warning("Could not connect to %s: %r", identifier, e)
                 self._set(connected=False, error=str(e) or type(e).__name__)
                 await self._wait_while(is_active, timeout=retry)
@@ -482,7 +482,7 @@ class Monitor(PushListener, PowerListener, AudioListener):
             artwork = await atv.metadata.artwork(width=256) if artwork_id else None
             if artwork is not None:
                 path = self._save_artwork(artwork.bytes, artwork.mimetype)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - missing artwork must not stop updates
             log.warning("Could not get artwork: %r", e)
         self._set(artwork=path)
 

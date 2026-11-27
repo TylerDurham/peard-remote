@@ -31,6 +31,11 @@ Snapshot = dict[str, Any]
 
 
 def _blank_playing() -> Snapshot:
+    """Get the part of a snapshot that describes what is playing, with nothing playing.
+
+    Returns:
+        A snapshot with every playing field empty and the state set to "idle".
+    """
     return {
         "state": "idle",
         "title": None,
@@ -50,6 +55,11 @@ def _blank_playing() -> Snapshot:
 
 
 def _blank_connection() -> Snapshot:
+    """Get the part of a snapshot that describes the connection, with no connection.
+
+    Returns:
+        A snapshot that isn't connected, with nothing playing and no features.
+    """
     return {
         "connected": False,
         "error": None,
@@ -70,11 +80,25 @@ def _blank_connection() -> Snapshot:
 
 
 def _blank() -> Snapshot:
+    """Get a full snapshot with no TV, no connection and nothing playing.
+
+    Returns:
+        The snapshot subscribers see before anything is known.
+    """
     return {"device": None, "deviceId": None, **_blank_connection()}
 
 
 def _safe[T](fn: Callable[[], T], default: T) -> T:
-    """Read a value from the TV, which may not support it or may be disconnected."""
+    """Read a value from the TV, which may not support it or may be disconnected.
+
+    Args:
+        fn: Reads the value.
+        default: The value to return if the TV can't provide it.
+
+    Returns:
+        The value `fn` read, or `default` if the TV doesn't support it or is in a state
+        that blocks it.
+    """
     try:
         return fn()
     except (exceptions.NotSupportedError, exceptions.BlockedStateError):
@@ -82,9 +106,28 @@ def _safe[T](fn: Callable[[], T], default: T) -> T:
 
 
 class Monitor(PushListener, PowerListener, AudioListener):
-    """Follows the active TV for as long as there is at least one subscriber."""
+    """Follows the active TV for as long as there is at least one subscriber, and sends
+    each subscriber a snapshot of its state whenever it changes.
+
+    pyatv calls the listener methods when the TV reports a change.
+
+    Attributes:
+        _controller: Opens and holds the connections to the TVs.
+        _state: The latest snapshot.
+        _subscribers: The queue of each subscriber.
+        _task: The task that follows the active TV, or None when nobody is subscribed.
+        _wake: Set to check for a change of active TV right away.
+        _atv: The connection being watched, or None if there isn't one.
+        _artwork_id: The identifier of the artwork last fetched.
+        _artwork_task: The task fetching the current artwork, if there is one.
+    """
 
     def __init__(self, controller: Controller) -> None:
+        """Create a monitor that doesn't watch anything until someone subscribes.
+
+        Args:
+            controller: Opens and holds the connections to the TVs.
+        """
         self._controller = controller
         self._state = _blank()
         self._subscribers: set[asyncio.Queue[Snapshot | None]] = set()
@@ -97,8 +140,12 @@ class Monitor(PushListener, PowerListener, AudioListener):
     @contextmanager
     def subscribe(self) -> Iterator[asyncio.Queue[Snapshot | None]]:
         """Get a queue that starts with the current snapshot and receives new ones.
+        The first subscriber starts watching the active TV, and the last one to leave
+        stops it.
 
-        It receives `None` once there won't be any more.
+        Yields:
+            The queue. It only holds the latest snapshot, and receives `None` once there
+            won't be any more.
         """
         # Only the latest snapshot matters, so a slow subscriber skips older ones.
         queue: asyncio.Queue[Snapshot | None] = asyncio.Queue(maxsize=1)
@@ -114,6 +161,7 @@ class Monitor(PushListener, PowerListener, AudioListener):
                 self._stop()
 
     def _stop(self) -> None:
+        """Stop watching the active TV and reset the snapshot."""
         if self._task is not None:
             self._task.cancel()
             self._task = None
@@ -128,6 +176,12 @@ class Monitor(PushListener, PowerListener, AudioListener):
 
     @staticmethod
     def _put(queue: asyncio.Queue[Snapshot | None], item: Snapshot | None) -> None:
+        """Put an item in a queue, replacing the one in it if the queue is full.
+
+        Args:
+            queue: The subscriber's queue.
+            item: The snapshot, or `None` to say there won't be any more.
+        """
         if queue.full():
             queue.get_nowait()
         queue.put_nowait(item)
@@ -137,6 +191,11 @@ class Monitor(PushListener, PowerListener, AudioListener):
         self._wake.set()
 
     def _set(self, **changes: Any) -> None:
+        """Update the snapshot and send it to the subscribers if anything changed.
+
+        Args:
+            **changes: The snapshot fields to change and their new values.
+        """
         state = {**self._state, **changes}
         if state == self._state:
             return
@@ -148,6 +207,7 @@ class Monitor(PushListener, PowerListener, AudioListener):
     # Connecting
 
     async def _run(self) -> None:
+        """Follow the active TV until cancelled, starting again after any error."""
         while True:
             try:
                 await self._follow()
@@ -156,6 +216,10 @@ class Monitor(PushListener, PowerListener, AudioListener):
                 await asyncio.sleep(MAX_RETRY)
 
     async def _follow(self) -> None:
+        """Connect to the active TV and watch it, switching when the active TV changes
+        and reconnecting when the connection is lost. Waits longer after each failed
+        attempt, up to `MAX_RETRY` seconds.
+        """
         retry = MIN_RETRY
         while True:
             config = Config.load()
@@ -211,6 +275,10 @@ class Monitor(PushListener, PowerListener, AudioListener):
         """Wait until the condition is false. Checks every second, or on `wake()`.
 
         The config has to be polled because the CLI can change the active TV too.
+
+        Args:
+            condition: Checked to decide whether to keep waiting.
+            timeout: The most seconds to wait, or None to wait as long as it takes.
         """
         deadline = None if timeout is None else time.monotonic() + timeout
         while condition() and (deadline is None or time.monotonic() < deadline):
@@ -221,6 +289,11 @@ class Monitor(PushListener, PowerListener, AudioListener):
             self._wake.clear()
 
     def _attach(self, atv: AppleTV) -> None:
+        """Start watching a connection and receiving updates from it.
+
+        Args:
+            atv: The connection to the active TV.
+        """
         self._atv = atv
         self._set(
             **{
@@ -240,6 +313,11 @@ class Monitor(PushListener, PowerListener, AudioListener):
         _safe(lambda: atv.push_updater.start(), None)
 
     def _detach(self, atv: AppleTV) -> None:
+        """Stop watching a connection and receiving updates from it.
+
+        Args:
+            atv: The connection to stop watching.
+        """
         if self._artwork_task is not None:
             self._artwork_task.cancel()
             self._artwork_task = None
@@ -257,6 +335,12 @@ class Monitor(PushListener, PowerListener, AudioListener):
     # Updates from the TV
 
     def playstatus_update(self, updater: Any, playstatus: Playing) -> None:
+        """Update the snapshot when what is playing changes.
+
+        Args:
+            updater: The push updater that sent the update.
+            playstatus: What is playing now.
+        """
         atv = self._atv
         if atv is None:
             return
@@ -282,29 +366,69 @@ class Monitor(PushListener, PowerListener, AudioListener):
         self._update_artwork(atv)
 
     def playstatus_error(self, updater: Any, exception: Exception) -> None:
+        """Restart push updates after they fail.
+
+        Args:
+            updater: The push updater that failed.
+            exception: The error that stopped the updates.
+        """
         log.warning("Push updates failed: %r", exception)
         # Updates stop after an error, so start them again in a while.
         _safe(lambda: updater.start(initial_delay=MAX_RETRY), None)
 
     def powerstate_update(self, old_state: PowerState, new_state: PowerState) -> None:
+        """Update the snapshot when the TV turns on or off.
+
+        Args:
+            old_state: The power state before the change.
+            new_state: The power state now.
+        """
         self._set(power=self._power_name(new_state))
 
     def volume_update(self, old_level: float, new_level: float) -> None:
+        """Update the volume and features when the volume changes.
+
+        Args:
+            old_level: The volume before the change.
+            new_level: The volume now.
+        """
         self._update_features()
 
     def volume_device_update(
         self, output_device: Any, old_level: float, new_level: float
     ) -> None:
+        """Update the volume and features when an output device's volume changes.
+
+        Args:
+            output_device: The output device whose volume changed.
+            old_level: The volume before the change.
+            new_level: The volume now.
+        """
         self._update_features()
 
     def outputdevices_update(self, old_devices: Any, new_devices: Any) -> None:
+        """Update the volume and features when the output devices change.
+
+        Args:
+            old_devices: The output devices before the change.
+            new_devices: The output devices now.
+        """
         self._update_features()
 
     @staticmethod
     def _power_name(state: PowerState) -> str:
+        """Get the name the snapshot uses for a power state.
+
+        Args:
+            state: The power state.
+
+        Returns:
+            The state's name in lower case, such as "on".
+        """
         return state.name.lower()
 
     def _update_features(self) -> None:
+        """Update the volume and which controls the TV supports."""
         atv = self._atv
         if atv is None:
             return
@@ -331,6 +455,11 @@ class Monitor(PushListener, PowerListener, AudioListener):
     # Artwork
 
     def _update_artwork(self, atv: AppleTV) -> None:
+        """Fetch the artwork in the background if it has changed.
+
+        Args:
+            atv: The connection to the active TV.
+        """
         artwork_id = _safe(lambda: atv.metadata.artwork_id, None)
         if artwork_id == self._artwork_id:
             return
@@ -341,6 +470,13 @@ class Monitor(PushListener, PowerListener, AudioListener):
         self._artwork_task = asyncio.create_task(self._fetch_artwork(atv, artwork_id))
 
     async def _fetch_artwork(self, atv: AppleTV, artwork_id: str | None) -> None:
+        """Fetch the artwork, save it, and put its path in the snapshot. The path is
+        None if there is no artwork or it couldn't be fetched.
+
+        Args:
+            atv: The connection to the active TV.
+            artwork_id: The identifier of the artwork, or None if there is none.
+        """
         path = None
         try:
             artwork = await atv.metadata.artwork(width=256) if artwork_id else None
@@ -352,6 +488,15 @@ class Monitor(PushListener, PowerListener, AudioListener):
 
     @staticmethod
     def _save_artwork(data: bytes, mimetype: str) -> str:
+        """Save artwork to the cache directory and delete any saved before it.
+
+        Args:
+            data: The image.
+            mimetype: The image's MIME type, such as "image/png".
+
+        Returns:
+            The path the artwork was saved to.
+        """
         directory = cache_dir()
         directory.mkdir(parents=True, exist_ok=True)
 

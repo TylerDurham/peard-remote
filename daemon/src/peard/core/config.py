@@ -20,7 +20,7 @@ def cache_dir() -> Path:
 
 
 # The Noctalia plugin reads the port from this file too.
-def config_path() -> Path:
+def config_file() -> Path:
     return config_dir() / "config.json"
 
 
@@ -43,7 +43,7 @@ class Config:
     def load(cls):
         cls._migrate_toml()
 
-        path = config_path()
+        path = config_file()
         if not path.exists():
             return cls()
 
@@ -53,7 +53,7 @@ class Config:
     def _migrate_toml(cls):
         """Convert the config.toml that older versions saved."""
         old = config_dir() / "config.toml"
-        if config_path().exists() or not old.exists():
+        if config_file().exists() or not old.exists():
             return
 
         # The server and the CLI may both get here, and one of them will be first.
@@ -97,7 +97,7 @@ class Config:
 
     def save(self):
 
-        path = config_path()
+        path = config_file()
         path.parent.mkdir(parents=True, exist_ok=True)
 
         data = {

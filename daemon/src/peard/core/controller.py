@@ -9,17 +9,37 @@ from peard.core.config import Config
 
 
 class _ConnectionListener(DeviceListener):
-    """Forgets a connection once it is lost or closed."""
+    """Tells a Controller to forget a connection once it is lost or closed, so the next
+    request connects again.
+
+    Attributes:
+        _controller: The Controller that holds the connection.
+        _identifier: The unique identifier of the TV.
+        _atv: The connection this listener watches.
+    """
 
     def __init__(self, controller: "Controller", identifier: str, atv: AppleTV) -> None:
+        """Create a listener for one connection.
+
+        Args:
+            controller: The Controller that holds the connection.
+            identifier: The unique identifier of the TV.
+            atv: The connection to watch.
+        """
         self._controller = controller
         self._identifier = identifier
         self._atv = atv
 
     def connection_lost(self, exception: Exception) -> None:
+        """Forget the connection after pyatv reports that it was lost.
+
+        Args:
+            exception: The error that caused the connection to be lost.
+        """
         self._controller._forget(self._identifier, self._atv)
 
     def connection_closed(self) -> None:
+        """Forget the connection after pyatv reports that it was closed."""
         self._controller._forget(self._identifier, self._atv)
 
 

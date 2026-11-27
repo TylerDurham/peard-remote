@@ -1,7 +1,5 @@
 """The `peard serve` command: run the HTTP API for the Noctalia plugin."""
 
-from typing import Optional
-
 import typer
 from typer import Option
 
@@ -9,7 +7,7 @@ from peard.core.config import Config
 
 
 def command(
-    port: Optional[int] = Option(
+    port: int | None = Option(
         None,
         "--port",
         "-p",
@@ -18,8 +16,18 @@ def command(
         help="The port to listen on. Defaults to the port in the config.",
     ),
 ):
-    """Starts the local API server."""
+    """Starts the local API server.
 
+    \f
+    Only listens on 127.0.0.1, and runs until it is stopped.
+
+    Args:
+        port: The port to listen on. Defaults to the port in the config.
+
+    Raises:
+        typer.Exit: With code 1 if the server couldn't start, for example because the
+            port is in use.
+    """
     # Imported here so that the other commands don't have to load the web framework.
     import uvicorn
 
@@ -29,7 +37,14 @@ def command(
         port = Config.load().port
 
     class Server(uvicorn.Server):
+        """A uvicorn server that ends the event streams when it shuts down."""
+
         async def shutdown(self, sockets=None) -> None:
+            """Close the monitor, then shut down as usual.
+
+            Args:
+                sockets: The sockets to close, passed on to uvicorn.
+            """
             # End the event streams, which would otherwise keep the server running.
             app.state.monitor.close()
             await super().shutdown(sockets)

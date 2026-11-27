@@ -1,13 +1,12 @@
 """The `peard pair` command: pair with an Apple TV and save its credentials."""
 
 import asyncio
-from typing import List
 
+import typer
 from pyatv.const import Protocol
 from pyatv.interface import BaseConfig
 from rich.console import Console
 from typer import Option
-import typer
 
 from peard.cli.ui import new_tv_table, select_from_table, spinner
 from peard.core import pairing
@@ -17,10 +16,20 @@ console = Console()
 
 
 def command(timeout: int = Option(5, "--timeout", "-t")):
-    """Pairs with an Apple TV on the local network."""
+    """Pairs with an Apple TV on the local network.
 
+    \f
+    Scans the network, lets the user choose a TV, pairs with it over AirPlay and saves
+    it to the config as the active TV.
+
+    Args:
+        timeout: How many seconds to scan for.
+
+    Raises:
+        typer.Exit: With code 1 if no TVs were found or the user quit.
+    """
     # `tvs` is assigned inside the spinner block, so declare its type up front.
-    tvs: List[BaseConfig]
+    tvs: list[BaseConfig]
 
     tbl = new_tv_table()
 
@@ -48,9 +57,11 @@ def command(timeout: int = Option(5, "--timeout", "-t")):
     # `pairing.pair` calls one of these two, depending on which side provides the PIN.
     # It awaits `ask_pin`, so that one must be async.
     async def ask_pin() -> int:
+        """Ask the user for the PIN the TV shows."""
         return int(typer.prompt("Enter the PIN shown on the TV"))
 
     def show_pin(pin: int) -> None:
+        """Show the user the PIN to enter on the TV."""
         console.print(f"Enter this PIN on the device: [bold]{pin}[/bold]")
 
     # The scan's event loop is closed by now, so pairing runs in a new one. It looks the

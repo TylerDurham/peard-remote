@@ -1,10 +1,9 @@
 """The `peard key` command: send a remote command to a paired Apple TV."""
 
 import asyncio
-from typing import Optional
 
-from pyatv import exceptions
 import typer
+from pyatv import exceptions
 
 from peard.cli.ui import spinner
 from peard.core.config import Config
@@ -12,8 +11,17 @@ from peard.core.controller import Controller
 
 
 async def _command(identifier: str, command: str) -> None:
-    """Connect to a TV, send it a single command and disconnect."""
+    """Connect to a TV, send it a single command and disconnect.
 
+    Args:
+        identifier: The unique identifier of the TV.
+        command: The name of a method of pyatv's RemoteControl, such as `play_pause`.
+
+    Raises:
+        LookupError: If the TV couldn't be found on the network.
+        PermissionError: If the TV hasn't been paired.
+        AttributeError: If the command doesn't exist.
+    """
     # A connection only works in the event loop that made it, so it has to be
     # used and closed in here.
     controller = Controller()
@@ -27,8 +35,18 @@ async def _command(identifier: str, command: str) -> None:
         await controller.close()
 
 
-def command(command: str, identifier: Optional[str] = None):
-    """Sends a command to a paired Apple TV (the active one by default)."""
+def command(command: str, identifier: str | None = None):
+    """Sends a command to a paired Apple TV (the active one by default).
+
+    \f
+    Args:
+        command: The name of a method of pyatv's RemoteControl, such as `play_pause`.
+        identifier: The unique identifier of the TV. Defaults to the active TV.
+
+    Raises:
+        typer.Exit: With code 1 if there is no TV to send to, or it couldn't be
+            reached.
+    """
     if identifier is None:
         identifier = Config.load().active
 

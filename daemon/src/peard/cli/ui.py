@@ -1,16 +1,22 @@
+"""Tables, prompts and spinners shared by the CLI commands."""
+
+from collections.abc import Callable
 from contextlib import contextmanager
+
+import typer
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
-from rich.console import Console
-import typer
 from rich.table import Table
-from pyatv.interface import BaseConfig
-from typing import Callable, List
 
 console = Console()
 
 
 def new_tv_table() -> Table:
+    """Create an empty table with the columns used to list TVs.
+
+    Returns:
+        A table with #, Name, Identifier, Address, Protocols and Paired columns.
+    """
     tbl = Table()
     tbl.add_column("#")
     tbl.add_column("Name")
@@ -22,6 +28,18 @@ def new_tv_table() -> Table:
 
 
 def select_from_table(tbl: Table) -> int:
+    """Print a table and ask the user to choose a row by number, until they enter a
+    valid one.
+
+    Args:
+        tbl: The table, with rows numbered from 1.
+
+    Returns:
+        The number of the row the user chose, from 1.
+
+    Raises:
+        typer.Exit: With code 1 if the user quit.
+    """
     count = len(tbl.rows)
 
     console.print(tbl)
@@ -46,6 +64,17 @@ def spinner(
     transient: bool = True,
     cb: Callable | None = None,
 ):
+    """Show a spinner with a message while the block runs.
+
+    Args:
+        description: The message to show next to the spinner.
+        console: The console to show the spinner on.
+        transient: Remove the spinner when the block ends.
+        cb: Called once, after the spinner has started.
+
+    Yields:
+        A function that changes the message.
+    """
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),

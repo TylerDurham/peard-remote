@@ -1,11 +1,11 @@
 """The `peard scan` command: find Apple TVs on the local network."""
 
 import asyncio
-from typing import List, Optional
 
 from pyatv.interface import BaseConfig
 from rich.console import Console
 from typer import Option
+
 from peard.cli.ui import new_tv_table, spinner
 from peard.core.config import Config
 from peard.core.discovery import scan
@@ -14,18 +14,24 @@ console = Console()
 
 
 def command(
-    hosts: Optional[List[str]] = Option(
+    hosts: list[str] | None = Option(
         None, "--hosts", "-H", help="One or more host ip addresses"
     ),
-    identifier: Optional[str] = Option(
-        None, "--identifier", "-i", help="The identifier."
-    ),
+    identifier: str | None = Option(None, "--identifier", "-i", help="The identifier."),
     timeout: int = Option(5, "--timeout", "-t"),
 ):
-    """Scans the network for compatible Apple TV devices."""
+    """Scans the network for compatible Apple TV devices.
 
+    \f
+    Prints a table of the TVs found, with their protocols and whether they are paired.
+
+    Args:
+        hosts: Ask these IP addresses directly instead of using mDNS.
+        identifier: Only find the TV with this unique identifier.
+        timeout: How many seconds to scan for.
+    """
     # `tvs` is assigned inside the spinner block, so declare its type up front.
-    tvs: List[BaseConfig]
+    tvs: list[BaseConfig]
     tbl = new_tv_table()
 
     with spinner("Scanning for TVs. Please wait..."):

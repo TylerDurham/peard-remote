@@ -1,6 +1,8 @@
+"""The `peard` command line, which puts the commands from the other modules together."""
+
 from typer import Typer
 
-from peard.cli import scan, key, list, set, pair, serve
+from peard.cli import key, list, pair, scan, serve, set
 
 app = Typer()
 

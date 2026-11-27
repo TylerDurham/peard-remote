@@ -17,7 +17,15 @@ def command(
     json: bool = Option(False, "--json", "-j", help="Format the output as JSON."),
     timeout: int = Option(5, "--timeout", "-t"),
 ):
-    """Lists all paired Apple TVs."""
+    """Lists all paired Apple TVs.
+
+    \f
+    Scans the network to show each TV's address, unless printing JSON.
+
+    Args:
+        json: Print the saved config as JSON, without the credentials.
+        timeout: How many seconds to scan for.
+    """
     cfg = Config.load()
 
     # JSON output is just the saved config, so it doesn't need a scan.

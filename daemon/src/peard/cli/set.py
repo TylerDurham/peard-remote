@@ -1,6 +1,7 @@
 """The `peard set` commands: change the settings saved in the config."""
 
 import asyncio
+from typing import Annotated
 
 import typer
 from rich.console import Console
@@ -18,9 +19,10 @@ app = Typer(no_args_is_help=True)
 
 @app.command()
 def active(
-    identifier: str | None = Argument(
-        None, help="The identifier of a paired TV. Choose from a list if omitted."
-    ),
+    identifier: Annotated[
+        str | None,
+        Argument(help="The identifier of a paired TV. Choose from a list if omitted."),
+    ] = None,
 ):
     """Sets the active Apple TV.
 
@@ -85,7 +87,9 @@ def active(
 
 @app.command()
 def port(
-    port: int = Argument(min=1, max=65535, help="The port for the server to use."),
+    port: Annotated[
+        int, Argument(min=1, max=65535, help="The port for the server to listen on.")
+    ],
 ):
     """Sets the port that the server listens on.
 

@@ -2,6 +2,7 @@
 
 import asyncio
 from dataclasses import asdict
+from typing import Annotated
 
 from rich.console import Console
 from typer import Option
@@ -14,8 +15,16 @@ console = Console()
 
 
 def command(
-    json: bool = Option(False, "--json", "-j", help="Format the output as JSON."),
-    timeout: int = Option(5, "--timeout", "-t"),
+    json: Annotated[
+        bool,
+        Option("--json", "-j", help="Print the saved TVs as JSON, without scanning."),
+    ] = False,
+    timeout: Annotated[
+        int,
+        Option(
+            "--timeout", "-t", help="How many seconds to scan for the TVs' addresses."
+        ),
+    ] = 5,
 ):
     """Lists all paired Apple TVs.
 

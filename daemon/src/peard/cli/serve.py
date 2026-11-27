@@ -1,5 +1,7 @@
 """The `peard serve` command: run the HTTP API for the Noctalia plugin."""
 
+from typing import Annotated
+
 import typer
 from typer import Option
 
@@ -7,14 +9,16 @@ from peard.core.config import Config
 
 
 def command(
-    port: int | None = Option(
-        None,
-        "--port",
-        "-p",
-        min=1,
-        max=65535,
-        help="The port to listen on. Defaults to the port in the config.",
-    ),
+    port: Annotated[
+        int | None,
+        Option(
+            "--port",
+            "-p",
+            min=1,
+            max=65535,
+            help="The port to listen on. Defaults to the port in the config.",
+        ),
+    ] = None,
 ):
     """Starts the local API server.
 

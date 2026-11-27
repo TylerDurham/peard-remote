@@ -1,6 +1,7 @@
 """The `peard pair` command: pair with an Apple TV and save its credentials."""
 
 import asyncio
+from typing import Annotated
 
 import typer
 from pyatv.const import Protocol
@@ -15,7 +16,11 @@ from peard.core.discovery import scan
 console = Console()
 
 
-def command(timeout: int = Option(5, "--timeout", "-t")):
+def command(
+    timeout: Annotated[
+        int, Option("--timeout", "-t", help="How many seconds to scan for TVs.")
+    ] = 5,
+):
     """Pairs with an Apple TV on the local network.
 
     \f

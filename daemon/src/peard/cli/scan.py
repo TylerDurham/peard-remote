@@ -1,6 +1,7 @@
 """The `peard scan` command: find Apple TVs on the local network."""
 
 import asyncio
+from typing import Annotated
 
 from pyatv.interface import BaseConfig
 from rich.console import Console
@@ -14,11 +15,21 @@ console = Console()
 
 
 def command(
-    hosts: list[str] | None = Option(
-        None, "--hosts", "-H", help="One or more host ip addresses"
-    ),
-    identifier: str | None = Option(None, "--identifier", "-i", help="The identifier."),
-    timeout: int = Option(5, "--timeout", "-t"),
+    hosts: Annotated[
+        list[str] | None,
+        Option(
+            "--hosts",
+            "-H",
+            help="Ask this IP address directly instead of using mDNS. Repeat to ask several.",
+        ),
+    ] = None,
+    identifier: Annotated[
+        str | None,
+        Option("--identifier", "-i", help="Only find the TV with this identifier."),
+    ] = None,
+    timeout: Annotated[
+        int, Option("--timeout", "-t", help="How many seconds to scan for TVs.")
+    ] = 5,
 ):
     """Scans the network for compatible Apple TV devices.
 

@@ -1,6 +1,7 @@
 """The `peard key` command: send a remote command to a paired Apple TV."""
 
 import asyncio
+from typing import Annotated
 
 import typer
 from pyatv import exceptions
@@ -35,7 +36,18 @@ async def _command(identifier: str, command: str) -> None:
         await controller.close()
 
 
-def command(command: str, identifier: str | None = None):
+def command(
+    command: Annotated[
+        str,
+        typer.Argument(
+            help="The remote command to send, such as play_pause, menu or volume_up."
+        ),
+    ],
+    identifier: Annotated[
+        str | None,
+        typer.Option(help="The identifier of a paired TV. Defaults to the active TV."),
+    ] = None,
+):
     """Sends a command to a paired Apple TV (the active one by default).
 
     \f

@@ -1,31 +1,59 @@
-from pathlib import Path
-from dataclasses import asdict, dataclass, field
-from typing import Any, List
 import json
 import os
-import tomllib
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
+from typing import Any
 
 DEFAULT_DIR_NAME = "peard-remote"
 DEFAULT_PORT = 7655
 
 
 def config_dir() -> Path:
+    """Get the path to the config directory. Attempts to read from `XDG_CONFIG_HOME` and falls back
+    to `$HOME/.config`.
+
+    Returns:
+        The Path to the config directory.
+    """
     base = os.environ.get("XDG_CONFIG_HOME") or str(Path.home() / ".config")
     return Path(base) / DEFAULT_DIR_NAME
 
 
 def cache_dir() -> Path:
+    """Get the path to the cache directory. Attempts to read from `XDG_cache_HOME` and falls back
+    to `$HOME/.cache`.
+
+    Returns:
+        The Path to the config directory.
+    """
     base = os.environ.get("XDG_CACHE_HOME") or str(Path.home() / ".cache")
     return Path(base) / DEFAULT_DIR_NAME
 
 
 # The Noctalia plugin reads the port from this file too.
 def config_file() -> Path:
+    """Gets the absolute path to the config file.
+
+    Returns:
+        The Path to the config file.
+
+    """
     return config_dir() / "config.json"
 
 
 @dataclass()
 class Device:
+    """A TV that has been paired and saved to the config file.
+
+    Attributes:
+        credentials: The pairing credentials pyatv returned, used to connect without
+            pairing again. Keep these private.
+        name: The TV's display name, such as "Living Room".
+        description: The TV's model, such as "Apple TV 4K".
+        identifier: The unique identifier pyatv uses for the TV.
+        protocol: The name of the protocol the credentials belong to, such as "AirPlay".
+    """
+
     credentials: str
     name: str
     description: str
@@ -35,14 +63,26 @@ class Device:
 
 @dataclass()
 class Config:
+    """The settings shared by the daemon, the CLI and the Noctalia plugin, saved as JSON
+    in the file from `config_file()`.
+
+    Attributes:
+        active: The identifier of the TV that commands go to, or None if no TV is active.
+        port: The port the daemon's HTTP server listens on.
+        devices: The TVs that have been paired.
+    """
+
     active: str | None = None
     port: int = DEFAULT_PORT
-    devices: List[Device] = field(default_factory=list)
+    devices: list[Device] = field(default_factory=list)
 
     @classmethod
     def load(cls):
-        cls._migrate_toml()
+        """Load the config from the file at `config_file()`.
 
+        Returns:
+            The saved Config, or a Config with default values if the file doesn't exist.
+        """
         path = config_file()
         if not path.exists():
             return cls()
@@ -50,26 +90,16 @@ class Config:
         return cls._from_dict(json.loads(path.read_text(encoding="utf-8")))
 
     @classmethod
-    def _migrate_toml(cls):
-        """Convert the config.toml that older versions saved."""
-        old = config_dir() / "config.toml"
-        if config_file().exists() or not old.exists():
-            return
-
-        # The server and the CLI may both get here, and one of them will be first.
-        try:
-            data = tomllib.loads(old.read_text(encoding="utf-8"))
-        except FileNotFoundError:
-            return
-
-        cls._from_dict(data).save()
-        try:
-            old.rename(old.with_name("config.toml.bak"))
-        except FileNotFoundError:
-            pass
-
-    @classmethod
     def _from_dict(cls, data: dict[str, Any]):
+        """Build a Config from the dictionary read from the config file. Devices without
+        an identifier are skipped, and missing values fall back to their defaults.
+
+        Args:
+            data: The parsed contents of the config file.
+
+        Returns:
+            The Config the dictionary describes.
+        """
         active = data.get("active")
 
         devices = [
@@ -89,6 +119,17 @@ class Config:
         )
 
     def get_by_id(self, identifier: str):
+        """Gets the device from the config file using the specified `identifier`.
+
+        Args:
+            identifier: The unique identifier of the device.
+
+        Returns:
+            The device with the matching `identifier`.
+
+        Raises:
+            KeyError: If no device was found.
+        """
         for device in self.devices:
             if device.identifier == identifier:
                 return device
@@ -96,7 +137,13 @@ class Config:
         raise KeyError(f"Could not find a device with id '{identifier}'")
 
     def save(self):
+        """Save the config to the file at `config_file()`, creating its directory if
+        needed. The file is replaced in one step, so readers never see a half-written
+        file, and only the current user can read it.
 
+        Returns:
+            The Path the config was saved to.
+        """
         path = config_file()
         path.parent.mkdir(parents=True, exist_ok=True)
 

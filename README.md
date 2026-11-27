@@ -129,9 +129,6 @@ The daemon and the plugin share this file. To change the port, run
 follows. `peard serve --port` doesn't change the file, so the plugin won't follow it. To
 point the plugin somewhere else, set its Bridge URL in Noctalia.
 
-A `config.toml` from an older version is converted automatically and kept as
-`config.toml.bak`. It holds your credentials too, and you can delete it.
-
 ## Troubleshooting
 
 - **No TVs found:** make sure the TV is awake and on the same network, and that your

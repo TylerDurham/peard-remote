@@ -24,6 +24,15 @@ class _ConnectionListener(DeviceListener):
 
 
 class Controller:
+    """Keeps connections to paired TVs open so commands can reuse them. A connection is
+    opened the first time a TV is asked for and forgotten when it is lost or closed.
+
+    Attributes:
+        _connections: The open connections, keyed by TV identifier.
+        _listeners: The listener for each open connection, keyed by TV identifier.
+        _lock: Serializes connecting and closing, so a TV is never connected twice.
+    """
+
     def __init__(self) -> None:
         self._connections: dict[str, AppleTV] = {}
         # pyatv only keeps weak references to listeners, so hold on to them here.
@@ -31,7 +40,18 @@ class Controller:
         self._lock = asyncio.Lock()
 
     async def get(self, identifier: str) -> AppleTV:
-        """Return a connection to a paired TV, connecting if needed."""
+        """Get a connection to a paired TV, connecting to it if there isn't one open.
+
+        Args:
+            identifier: The unique identifier of the TV.
+
+        Returns:
+            The open connection to the TV.
+
+        Raises:
+            PermissionError: If the TV hasn't been paired.
+            LookupError: If the TV couldn't be found on the network.
+        """
         async with self._lock:
             if identifier in self._connections:
                 return self._connections[identifier]
@@ -58,17 +78,34 @@ class Controller:
             return atv
 
     def current(self, identifier: str) -> AppleTV | None:
-        """Return the open connection to a TV, if there is one."""
+        """Get the open connection to a TV without connecting to it.
+
+        Args:
+            identifier: The unique identifier of the TV.
+
+        Returns:
+            The open connection to the TV, or None if there isn't one.
+        """
         return self._connections.get(identifier)
 
     def _forget(self, identifier: str, atv: AppleTV) -> None:
+        """Remove a connection from the open connections without closing it.
+
+        Args:
+            identifier: The unique identifier of the TV.
+            atv: The connection to forget.
+        """
         # The TV may have been reconnected already, so only forget this connection.
         if self._connections.get(identifier) is atv:
             del self._connections[identifier]
             del self._listeners[identifier]
 
     async def drop(self, identifier: str) -> None:
-        """Close the connection to a TV, if there is one."""
+        """Close the connection to a TV, if there is one.
+
+        Args:
+            identifier: The unique identifier of the TV.
+        """
         async with self._lock:
             atv = self._connections.get(identifier)
             if atv is not None:
@@ -76,7 +113,7 @@ class Controller:
                 await asyncio.gather(*atv.close())
 
     async def close(self) -> None:
-        """Close all open connections."""
+        """Close all open connections. Call this when you are done with the controller."""
         async with self._lock:
             # Closing calls the listeners, so empty the dicts before that happens.
             connections = list(self._connections.values())
